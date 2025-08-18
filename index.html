@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Pomodoro (Ring)</title>
+<meta name="theme-color" content="#0ea5e9">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{
   --bg:#f7f9fc; --card:#ffffff; --ink:#121417; --muted:#6b7280;
@@ -73,8 +78,6 @@ svg{width:100%;height:100%}
     <div class="header">
       <div class="brand">Pomodoro</div>
       <div class="controls">
-        <button class="primary" id="startBtn">Start</button>
-        <button class="ghost" id="pauseBtn">Pause</button>
         <button class="ghost" id="resetBtn">Reset</button>
         <button class="ghost" id="durBtn" aria-haspopup="dialog" aria-controls="durModal">Durations</button>
         <button class="ghost" id="optionsBtn" aria-haspopup="dialog" aria-controls="optionsModal">Options</button>
@@ -184,8 +187,6 @@ const ring     = document.getElementById('ring');
 const dial     = document.getElementById('dial');
 const timePane = document.getElementById('timePane');
 
-const startBtn = document.getElementById('startBtn');
-const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
 const workBtn  = document.getElementById('workBtn');
 const breakBtn = document.getElementById('breakBtn');
@@ -266,6 +267,56 @@ function ensureAudioCtx(){
   }
   return audioCtx;
 }
+
+/* ==== 화면 깨우기 (Wake Lock: 표준 + iOS 대체) ==== */
+let wakeLockSentinel = null; // 표준 스크린 웨이크락
+// iOS 사파리 대체: 무음 1x1 비디오를 인라인으로 재생 (NoSleep 기법)
+let iOSNoSleepVideo = null;
+const iOSNoSleepSrc = 'data:video/mp4;base64,AAAAHGZ0eXBtcDQyAAAAAG1wNDFtcDQyaXNvbWF2YzEAAAAIZnJlZQAABm1kYXQAAAAAAAABAAACAAAAGQAAABkAAAABAAAAAQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+
+function isIOS(){
+  return /iP(ad|hone|od)/.test(navigator.platform) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
+}
+
+async function requestWakeLock(){
+  try {
+    if ('wakeLock' in navigator && navigator.wakeLock.request){
+      wakeLockSentinel = await navigator.wakeLock.request('screen');
+      wakeLockSentinel.addEventListener('release', () => { /* released */ });
+      return true;
+    }
+  } catch(e) {
+    // 표준 실패 시 iOS 대체 시도
+  }
+  // iOS 대체
+  if (isIOS()){
+    if (!iOSNoSleepVideo){
+      iOSNoSleepVideo = document.createElement('video');
+      iOSNoSleepVideo.setAttribute('playsinline','');
+      iOSNoSleepVideo.setAttribute('muted','');
+      iOSNoSleepVideo.muted = true;
+      iOSNoSleepVideo.loop = true;
+      iOSNoSleepVideo.src = iOSNoSleepSrc;
+      iOSNoSleepVideo.style.position='fixed';
+      iOSNoSleepVideo.style.width='1px';
+      iOSNoSleepVideo.style.height='1px';
+      iOSNoSleepVideo.style.opacity='0';
+      iOSNoSleepVideo.style.pointerEvents='none';
+      iOSNoSleepVideo.style.zIndex='-1';
+      document.body.appendChild(iOSNoSleepVideo);
+    }
+    try { await iOSNoSleepVideo.play(); return true; } catch(e) { return false; }
+  }
+  return false;
+}
+
+async function releaseWakeLock(){
+  try { if (wakeLockSentinel){ await wakeLockSentinel.release(); } } catch(e){}
+  wakeLockSentinel = null;
+  if (iOSNoSleepVideo){
+    try { iOSNoSleepVideo.pause(); } catch(e){}
+  }
+}
 function beepPattern(){
   const ctx = ensureAudioCtx();
   if (!ctx) return;
@@ -324,16 +375,19 @@ function start(){
   ensureAudioCtx();
   subText.textContent = '진행 중…';
   timerId = setInterval(tick, 250);
+  requestWakeLock();
 }
 function pause(){
   if (!timerId) return;
   clearInterval(timerId); timerId=null;
   subText.textContent = '일시정지';
+  releaseWakeLock();
 }
 function reset(){
   clearInterval(timerId); timerId=null;
   remaining = total; render();
   subText.textContent = '탭하여 시작/일시정지';
+  releaseWakeLock();
 }
 function switchMode(next){
   mode = next;
@@ -367,9 +421,6 @@ timePane.addEventListener('click', (e)=>{
   ensureAudioCtx();
   if (timerId) pause(); else start();
 });
-
-startBtn.addEventListener('click', ()=>{ ensureAudioCtx(); start(); });
-pauseBtn.addEventListener('click', pause);
 resetBtn.addEventListener('click', reset);
 workBtn.addEventListener('click', ()=>{ switchMode('work'); setRingColor(); });
 breakBtn.addEventListener('click', ()=>{ switchMode('break'); setRingColor(); });
@@ -440,6 +491,20 @@ function hideDurError(){ durErr.style.display='none'; durErr.textContent=''; }
 
 /* 초기 렌더 */
 render();
+
+/* 가시성 변경 시 웨이크락 재요청 (일시 해제 대응) */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && timerId){
+    requestWakeLock();
+  }
+});
+
+/* PWA: 서비스 워커 등록 */
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>
