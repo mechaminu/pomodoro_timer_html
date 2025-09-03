@@ -36,6 +36,9 @@
 
 Detailed documentation for each step is available in `/docs`:
 
+=======
+## Documentation Index
+- [Framework Selection](docs/framework-selection.md)
 - [Core Timer](docs/core-timer.md)
 - [Background Execution](docs/background-execution.md)
 - [Activity Monitoring and Focus Metric](docs/activity-monitoring.md)
