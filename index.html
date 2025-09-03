@@ -179,7 +179,8 @@ svg{width:100%;height:100%}
     </div>
   </div>
 
-<script>
+<script type="module">
+import { configure, startTimer, pauseTimer, resetTimer, switchMode, setDurations, getState } from './src/timer.js';
 /* ==== 엘리먼트 ==== */
 const timeText = document.getElementById('timeText');
 const subText  = document.getElementById('subText');
@@ -348,82 +349,74 @@ function notifySelected(){
 function notifyAllForce(){ beepPattern(); vibratePattern(); startFlash(); }
 
 /* ==== 타이머 ==== */
-let mode = 'work';                 // 'work' | 'break'
-let total = workDuration;
-let remaining = total;
-let timerId = null;
-
 function format(t){
   const m = Math.floor(t/60).toString().padStart(2,'0');
   const s = Math.floor(t%60).toString().padStart(2,'0');
   return `${m}:${s}`;
 }
 function setRingColor(){
+  const { mode } = getState();
   ring.setAttribute('stroke', mode==='work'
     ? getComputedStyle(document.documentElement).getPropertyValue('--work')
     : getComputedStyle(document.documentElement).getPropertyValue('--break'));
 }
 function render(){
+  const { remaining, total } = getState();
   timeText.textContent = format(remaining);
   const progress = 1 - (remaining/total);
   const offset = Math.max(0, Math.min(C, progress*C));
   ring.setAttribute('stroke-dashoffset', offset.toString());
   setRingColor();
 }
-function start(){
-  if (timerId) return;
-  ensureAudioCtx();
-  subText.textContent = '진행 중…';
-  timerId = setInterval(tick, 250);
-  requestWakeLock();
-}
-function pause(){
-  if (!timerId) return;
-  clearInterval(timerId); timerId=null;
-  subText.textContent = '일시정지';
-  releaseWakeLock();
-}
-function reset(){
-  clearInterval(timerId); timerId=null;
-  remaining = total; render();
-  subText.textContent = '탭하여 시작/일시정지';
-  releaseWakeLock();
-}
-function switchMode(next){
-  mode = next;
-  total = (mode==='work'?workDuration:breakDuration);
-  remaining = total;
-  workBtn.classList.toggle('active', mode==='work');
-  breakBtn.classList.toggle('active', mode==='break');
-  render();
-}
-function tick(){
-  remaining = Math.max(0, remaining - 0.25);
-  render();
-  if (remaining <= 0){
-    notifySelected();
-    switchMode(mode==='work' ? 'break' : 'work');
-    start();
-  }
-}
+
+configure({
+  onTick: render,
+  onModeChange: (mode) => {
+    workBtn.classList.toggle('active', mode === 'work');
+    breakBtn.classList.toggle('active', mode === 'break');
+  },
+  onComplete: notifySelected
+});
+
+setDurations(workDuration, breakDuration);
 
 /* ==== 이벤트: 타이머/모드 ==== */
-const canEditDurations = () => !timerId; // 실행 중이 아닐 때만
+const canEditDurations = () => !getState().timerId; // 실행 중이 아닐 때만
 // 다이얼(시간 영역 포함) 탭 시 시작/일시정지로만 동작
 
 dial.addEventListener('click', ()=>{
   ensureAudioCtx();
-  if (timerId) pause(); else start();
+  if (getState().timerId) {
+    pauseTimer();
+    subText.textContent = '일시정지';
+    releaseWakeLock();
+  } else {
+    startTimer();
+    subText.textContent = '진행 중…';
+    requestWakeLock();
+  }
 });
 // 시간 텍스트 영역도 동일하게(편집 모달 열지 않음)
 timePane.addEventListener('click', (e)=>{
   e.stopPropagation();
   ensureAudioCtx();
-  if (timerId) pause(); else start();
+  if (getState().timerId) {
+    pauseTimer();
+    subText.textContent = '일시정지';
+    releaseWakeLock();
+  } else {
+    startTimer();
+    subText.textContent = '진행 중…';
+    requestWakeLock();
+  }
 });
-resetBtn.addEventListener('click', reset);
-workBtn.addEventListener('click', ()=>{ switchMode('work'); setRingColor(); });
-breakBtn.addEventListener('click', ()=>{ switchMode('break'); setRingColor(); });
+resetBtn.addEventListener('click', ()=>{
+  resetTimer();
+  subText.textContent = '탭하여 시작/일시정지';
+  releaseWakeLock();
+});
+workBtn.addEventListener('click', ()=>{ switchMode('work'); });
+breakBtn.addEventListener('click', ()=>{ switchMode('break'); });
 
 /* ==== 옵션 모달 ==== */
 optionsBtn.addEventListener('click', ()=>{ ensureAudioCtx(); overlayOpt.classList.add('show'); refreshDebugUI(); });
@@ -470,9 +463,8 @@ saveDurBtn.addEventListener('click', ()=>{
   workDuration  = wm * 60;
   breakDuration = bm * 60;
   // 현재 모드 기준으로 표시 동기화(실행 중이 아닐 때만)
-  if (!timerId){
-    if (mode==='work'){ total = workDuration; } else { total = breakDuration; }
-    remaining = total;
+  setDurations(workDuration, breakDuration);
+  if (!getState().timerId){
     render();
   }
   closeDurModal();
@@ -494,7 +486,7 @@ render();
 
 /* 가시성 변경 시 웨이크락 재요청 (일시 해제 대응) */
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && timerId){
+  if (document.visibilityState === 'visible' && getState().timerId){
     requestWakeLock();
   }
 });
