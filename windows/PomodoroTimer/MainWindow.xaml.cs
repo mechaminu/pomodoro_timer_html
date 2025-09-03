@@ -13,6 +13,7 @@ namespace PomodoroTimer
         private readonly DispatcherTimer _uiTimer = new DispatcherTimer();
         private readonly KeyboardMonitor _keyboard = new KeyboardMonitor();
         private readonly KeysPerMinuteMetric _kpmMetric = new(TimeSpan.FromSeconds(10));
+
         private readonly List<double> _rateHistory = new();
         private int _lastSecond;
         private DateTime _sessionStart;
@@ -57,6 +58,7 @@ namespace PomodoroTimer
                     Title = afk ? "Pomodoro Timer (AFK)" : "Pomodoro Timer");
             };
             _keyboard.KeyPressed += () => _kpmMetric.RecordEvent(DateTime.Now);
+
             _afk.Start();
             _focusTracker.Start();
             _lastSecond = DateTime.Now.Second;
@@ -87,6 +89,7 @@ namespace PomodoroTimer
             TimerText.Text = _timer.GetState().Remaining.ToString(@"mm\:ss");
             _keyboard.Reset();
             _kpmMetric.Reset();
+
             _rateHistory.Clear();
             TypingPolyline.Points.Clear();
             TypingRateText.Text = "0 keys/min";
@@ -95,6 +98,7 @@ namespace PomodoroTimer
         private void UpdateTypingRate()
         {
             var rate = _kpmMetric.CurrentValue;
+
             TypingRateText.Text = $"{rate:F1} keys/min";
             var sec = DateTime.Now.Second;
             if (sec != _lastSecond)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace PomodoroTimer
@@ -7,6 +8,9 @@ namespace PomodoroTimer
     {
         private IntPtr _hookId = IntPtr.Zero;
         private readonly LowLevelKeyboardProc _proc;
+
+        private readonly List<DateTime> _presses = new();
+
         private int _totalPresses;
         public int TotalKeyPresses => _totalPresses;
         public event Action? KeyPressed;
