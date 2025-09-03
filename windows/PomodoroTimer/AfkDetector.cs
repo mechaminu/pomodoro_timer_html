@@ -7,7 +7,7 @@ namespace PomodoroTimer
     public class AfkDetector : IDisposable
     {
         private readonly Timer _timer = new Timer(1000);
-        private readonly TimeSpan _threshold;
+        private TimeSpan _threshold;
         private bool _isAfk;
         public event Action<bool>? AfkStatusChanged;
 
@@ -19,6 +19,8 @@ namespace PomodoroTimer
 
         public void Start() => _timer.Start();
         public void Stop() => _timer.Stop();
+
+        public void SetThreshold(TimeSpan threshold) => _threshold = threshold;
 
         private void Check()
         {

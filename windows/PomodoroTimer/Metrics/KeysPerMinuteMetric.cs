@@ -28,6 +28,11 @@ namespace PomodoroTimer.Metrics
             PruneOld(timestamp);
         }
 
+        public void Tick(DateTime timestamp)
+        {
+            PruneOld(timestamp);
+        }
+
         public void Reset()
         {
             _timestamps.Clear();
