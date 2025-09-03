@@ -24,6 +24,7 @@
     <Compile Include="..\PomodoroTimer\TimerService.cs" Link="TimerService.cs" />
     <Compile Include="..\PomodoroTimer\Metrics\IActivityMetric.cs" Link="Metrics/IActivityMetric.cs" />
     <Compile Include="..\PomodoroTimer\Metrics\KeysPerMinuteMetric.cs" Link="Metrics/KeysPerMinuteMetric.cs" />
+    <Compile Include="..\PomodoroTimer\Metrics\AES\*.cs" Link="Metrics/AES/%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
