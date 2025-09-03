@@ -31,3 +31,11 @@
 5. **Future Enhancements**
    - Ensure operation when browser minimized or closed
    - Data export, advanced analytics, and platform-specific integrations
+
+## Documentation Index
+- [Framework Selection](docs/framework-selection.md)
+- [Core Timer](docs/core-timer.md)
+- [Background Execution](docs/background-execution.md)
+- [Activity Monitoring and Focus Metric](docs/activity-monitoring.md)
+- [Visualization](docs/visualization.md)
+- [Future Enhancements](docs/future-enhancements.md)
