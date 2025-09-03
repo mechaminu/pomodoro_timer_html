@@ -32,6 +32,11 @@
    - Ensure operation when browser minimized or closed
    - Data export, advanced analytics, and platform-specific integrations
 
+## Detailed Action Plan
+
+Detailed documentation for each step is available in `/docs`:
+
+=======
 ## Documentation Index
 - [Framework Selection](docs/framework-selection.md)
 - [Core Timer](docs/core-timer.md)
