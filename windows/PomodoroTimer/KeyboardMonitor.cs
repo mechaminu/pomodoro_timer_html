@@ -8,7 +8,9 @@ namespace PomodoroTimer
     {
         private IntPtr _hookId = IntPtr.Zero;
         private readonly LowLevelKeyboardProc _proc;
+
         private readonly List<DateTime> _presses = new();
+
         private int _totalPresses;
         public int TotalKeyPresses => _totalPresses;
         public event Action? KeyPressed;
@@ -33,22 +35,13 @@ namespace PomodoroTimer
 
         public void Reset()
         {
-            _presses.Clear();
             _totalPresses = 0;
-        }
-
-        public double GetRatePerMinute()
-        {
-            var threshold = DateTime.Now - TimeSpan.FromMinutes(1);
-            _presses.RemoveAll(t => t < threshold);
-            return _presses.Count;
         }
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
             if (nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN)
             {
-                _presses.Add(DateTime.Now);
                 _totalPresses++;
                 KeyPressed?.Invoke();
             }

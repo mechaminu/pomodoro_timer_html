@@ -36,3 +36,12 @@ See the overarching [AGENTS plan](../AGENTS.md). This document covers capturing 
 ## Challenges
 - Respecting user privacy and OS security restrictions.
 - Normalizing activity levels across different work styles.
+
+## Metric Architecture
+- Implement metrics behind an `IActivityMetric` interface so new analyses can plug in without altering input hooks.
+- Current `KeysPerMinuteMetric` uses a 10‑second rolling window to expose a responsive keys‑per‑minute value that drops quickly when typing stops.
+
+## Future Work: Semantic Task Detection
+- Record richer context (active process titles, typed text snippets).
+- Feed context windows into a Vision/Language Model (VLM) to infer the high‑level "task" being performed.
+- Map inferred tasks back to Pomodoro sessions for detailed productivity breakdowns.
